@@ -1,0 +1,65 @@
+name: Inspect release asset safely
+
+on:
+  push:
+    paths:
+      - .github/workflows/inspect-release-asset.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Download and inspect ZIP without executing contents
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, io, json, re, urllib.request, zipfile
+
+          url = "https://github.com/gulp/beads-atlas-demo/releases/download/v0.1.0/beads-atlas-demo.zip"
+          req = urllib.request.Request(url, headers={"User-Agent": "beads-atlas-demo-inspector"})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              data = r.read(2_000_001)
+          if len(data) > 2_000_000:
+              raise SystemExit("archive exceeds 2 MB safety limit")
+
+          print("ARCHIVE_BYTES", len(data))
+          print("ARCHIVE_SHA256", hashlib.sha256(data).hexdigest())
+
+          with zipfile.ZipFile(io.BytesIO(data)) as z:
+              infos = z.infolist()
+              print("FILE_COUNT", len(infos))
+              total = sum(i.file_size for i in infos)
+              print("TOTAL_UNCOMPRESSED_BYTES", total)
+              if len(infos) > 200 or total > 10_000_000:
+                  raise SystemExit("archive exceeds inspection safety limits")
+
+              print("--- ZIP LIST ---")
+              for i in infos:
+                  print(f"{i.file_size:9d}  {i.filename}")
+              print("--- END ZIP LIST ---")
+
+              text_exts = {".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".csv", ".tsv", ".py", ".sh", ".js", ".ts", ".html", ".css"}
+              for i in infos:
+                  if i.is_dir() or i.file_size > 300_000:
+                      continue
+                  lower = i.filename.lower()
+                  ext = "." + lower.rsplit(".", 1)[-1] if "." in lower.rsplit("/", 1)[-1] else ""
+                  base = lower.rsplit("/", 1)[-1]
+                  if ext not in text_exts and base not in {"readme", "instructions", "instruction", "prompt", "task"}:
+                      continue
+                  raw = z.read(i)
+                  if b"\x00" in raw[:4096]:
+                      continue
+                  try:
+                      text = raw.decode("utf-8")
+                  except UnicodeDecodeError:
+                      text = raw.decode("utf-8", errors="replace")
+                  text = re.sub(r"[^\x09\x0a\x0d\x20-\x7e\u0080-\uffff]", "?", text)
+                  print(f"--- BEGIN FILE: {i.filename} ---")
+                  print(text)
+                  print(f"--- END FILE: {i.filename} ---")
+          PY
