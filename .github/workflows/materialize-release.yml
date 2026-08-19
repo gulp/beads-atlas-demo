@@ -1,0 +1,108 @@
+name: Materialize release into repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/materialize-release.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download existing self-contained release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/beads-atlas-release
+          gh release download v0.1.0 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern beads-atlas-demo.zip \
+            --dir /tmp/beads-atlas-release
+          unzip -q /tmp/beads-atlas-release/beads-atlas-demo.zip -d /tmp/beads-atlas-unpacked
+          test -d /tmp/beads-atlas-unpacked/beads-atlas-demo
+
+      - name: Verify packaged source before publishing it as normal files
+        run: |
+          set -euo pipefail
+          cd /tmp/beads-atlas-unpacked/beads-atlas-demo
+          python3 verify.py
+
+      - name: Copy ordinary text-addressable files into repository root
+        run: |
+          set -euo pipefail
+          src=/tmp/beads-atlas-unpacked/beads-atlas-demo
+          rm -rf beads-atlas
+          rm -f issues.jsonl START_HERE.md SHA256SUMS verify.py
+          cp -a "$src/beads-atlas" ./beads-atlas
+          cp "$src/issues.jsonl" ./issues.jsonl
+          cp "$src/START_HERE.md" ./START_HERE.md
+          cp "$src/SHA256SUMS" ./SHA256SUMS
+          cp "$src/verify.py" ./verify.py
+
+      - name: Replace bootstrap README with repository-native instructions
+        run: |
+          cat > README.md <<'EOF'
+          # Beads Atlas — repository-native ChatGPT demo
+
+          This repository is deliberately **uncompressed and text-addressable**.
+          There is no Gist bootstrap, release download, archive extraction, or child URL to discover.
+
+          ## Fresh ChatGPT test
+
+          Give a new ChatGPT conversation exactly this:
+
+          ```text
+          Study https://github.com/gulp/beads-atlas-demo and follow instructions
+          ```
+
+          ## Instructions for ChatGPT
+
+          Treat this public repository as the complete clean-room task package.
+
+          1. Do not use prior conversations, projects, memory-derived artifacts, Gists, or release assets.
+          2. Stay inside the ordinary files on the repository's default branch.
+          3. Read `START_HERE.md`.
+          4. Read `beads-atlas/SKILL.md` completely and follow it as the operative skill contract.
+          5. Use the repository-root `issues.jsonl` as the demonstration input; it contains the intended 41-issue corpus.
+          6. Use the skill's own bundled builder / graph logic / validator. Do not recreate that logic ad hoc.
+          7. Verify integrity using `SHA256SUMS` / `verify.py` where your environment permits.
+          8. Produce and validate the Beads Atlas HTML, then surface the finished HTML artifact.
+
+          If a repository file cannot be read through the available GitHub/repository tools, stop and report that exact transport limitation. Do not fall back to Gists, release ZIPs, `curl`, guessed IPs, web-search reconstruction, or prior state.
+
+          ## Repository layout
+
+          ```text
+          README.md
+          START_HERE.md
+          SHA256SUMS
+          verify.py
+          issues.jsonl
+          beads-atlas/
+            SKILL.md
+            ...the complete skill bundle...
+          ```
+
+          The point of this repository is to test the simplest possible bootstrap boundary: **one normal GitHub repository URL, then ordinary repository files only**.
+          EOF
+
+      - name: Commit materialized repository
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md START_HERE.md SHA256SUMS verify.py issues.jsonl beads-atlas
+          if git diff --cached --quiet; then
+            echo "Nothing to materialize"
+            exit 0
+          fi
+          git commit -m "materialize repository-native Beads Atlas demo"
+          git push
