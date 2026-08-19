@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    {"id": "spec", "label": "Define spec"},
+    {"id": "api", "label": "Build API"},
+    {"id": "ui", "label": "Build UI"},
+    {"id": "release", "label": "Release"}
+  ],
+  "edges": [
+    {"source": "spec", "target": "api"},
+    {"source": "spec", "target": "ui"},
+    {"source": "api", "target": "release"},
+    {"source": "ui", "target": "release"}
+  ]
+}

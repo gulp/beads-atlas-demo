@@ -1,0 +1,4 @@
+{"id":"demo","title":"Demo epic","status":"deferred","priority":1,"issue_type":"epic","labels":["demo"]}
+{"id":"demo.1","title":"Foundation","status":"open","priority":1,"issue_type":"task","dependencies":[{"issue_id":"demo.1","depends_on_id":"demo","type":"parent-child"}]}
+{"id":"demo.2","title":"Implementation","status":"open","priority":1,"issue_type":"task","dependencies":[{"issue_id":"demo.2","depends_on_id":"demo","type":"parent-child"},{"issue_id":"demo.2","depends_on_id":"demo.1","type":"blocks"}]}
+{"id":"demo.3","title":"Verification","status":"open","priority":2,"issue_type":"task","dependencies":[{"issue_id":"demo.3","depends_on_id":"demo","type":"parent-child"},{"issue_id":"demo.3","depends_on_id":"demo.2","type":"blocks"}]}

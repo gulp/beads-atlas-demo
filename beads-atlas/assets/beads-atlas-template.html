@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Beads Atlas — DAG Explorer</title>
+<style>
+  :root {
+    --bg:#071018; --panel:#0b1620; --panel2:#0e1b27; --panel3:#122230;
+    --line:#203443; --line2:#2b4455; --text:#e9f2f7; --muted:#8ea5b3; --faint:#617887;
+    --cyan:#57d8ff; --blue:#7aa7ff; --green:#65e4a3; --amber:#f3c86b; --red:#ff7b8c;
+    --purple:#c298ff; --teal:#61e6d0; --shadow:0 18px 55px rgba(0,0,0,.35);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:13px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{border:0}
+  .app{height:100vh;display:grid;grid-template-rows:58px minmax(0,1fr) 26px;background:
+    radial-gradient(1000px 600px at 58% 20%,rgba(39,92,120,.10),transparent 60%),var(--bg)}
+  .topbar{display:grid;grid-template-columns:auto minmax(240px,640px) auto;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line);background:rgba(7,16,24,.94);backdrop-filter:blur(14px);z-index:20}
+  .brand{display:flex;align-items:center;gap:10px;min-width:240px}
+  .brandmark{width:30px;height:30px;border-radius:9px;background:linear-gradient(145deg,#173447,#0d2230);border:1px solid #2c4c60;display:grid;place-items:center;box-shadow:inset 0 1px rgba(255,255,255,.06)}
+  .brandmark svg{width:19px;height:19px}
+  .brand strong{font-size:14px;letter-spacing:.01em}.brand small{display:block;color:var(--muted);font-size:10px;margin-top:1px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+  .searchwrap{position:relative}
+  .search{width:100%;height:36px;border:1px solid var(--line2);background:#0a151e;border-radius:10px;padding:0 38px 0 36px;outline:none;transition:.15s}
+  .search:focus{border-color:#4e8eae;box-shadow:0 0 0 3px rgba(87,216,255,.08)}
+  .searchicon{position:absolute;left:12px;top:9px;color:var(--muted);pointer-events:none}.shortcut{position:absolute;right:9px;top:8px;color:var(--faint);font:10px ui-monospace,monospace;border:1px solid var(--line);border-bottom-color:#355063;border-radius:5px;padding:1px 5px;background:#0d1a24}
+  .searchresults{display:none;position:absolute;left:0;right:0;top:42px;max-height:310px;overflow:auto;border:1px solid var(--line2);background:#0a151e;border-radius:12px;box-shadow:var(--shadow);z-index:60;padding:6px}
+  .searchresults.show{display:block}.searchrow{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 9px;border-radius:8px;cursor:pointer}.searchrow:hover,.searchrow.active{background:#122331}.searchrow b{font-weight:600}.searchrow small{color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.searchcount{color:var(--muted);font-size:11px;align-self:center}
+  .topactions{display:flex;gap:8px;justify-content:flex-end}#mobileFilters{display:none}.mobileClose{display:none}.btn{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line2);background:#0d1a24;border-radius:9px;padding:0 11px;cursor:pointer;transition:.15s;white-space:nowrap}.btn:hover{background:#142635;border-color:#3b5a6c}.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}.btn.primary{background:#123347;border-color:#28617d;color:#dff7ff}.btn.primary:hover{background:#18435a}.btn.icon{width:34px;padding:0}.btn.tiny{height:27px;padding:0 8px;border-radius:7px;font-size:11px}.btn.active{background:#18384b;border-color:#3a7697;color:#dff7ff}
+  .workspace{min-height:0;display:grid;grid-template-columns:252px minmax(0,1fr) 350px}
+  .sidebar,.inspector{min-height:0;overflow:auto;background:rgba(10,21,30,.88);backdrop-filter:blur(10px);scrollbar-color:#294151 transparent;scrollbar-width:thin}
+  .sidebar{border-right:1px solid var(--line);padding:13px}.inspector{border-left:1px solid var(--line);padding:14px}
+  .section{margin-bottom:18px}.sectionhead{display:flex;align-items:center;justify-content:space-between;color:#9fb2be;text-transform:uppercase;letter-spacing:.12em;font-weight:700;font-size:9px;margin:2px 2px 8px}.sectionhead span:last-child{color:var(--faint);letter-spacing:0;text-transform:none;font-weight:500}
+  .lensgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.lens{padding:9px 8px;text-align:left;border:1px solid var(--line);background:#0c1822;border-radius:9px;cursor:pointer}.lens:hover{border-color:#375469}.lens.active{border-color:#38789a;background:#112a38;box-shadow:inset 0 0 0 1px rgba(87,216,255,.06)}.lens b{display:block;font-size:11px;margin-bottom:2px}.lens span{font-size:9.5px;color:var(--muted);line-height:1.25;display:block}
+  .checklist{display:grid;gap:5px}.check{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:7px;cursor:pointer}.check:hover{background:#10202c}.check input{accent-color:#67c9ed}.check .count{margin-left:auto;color:var(--faint);font-size:10px}.swatch{width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.04)}
+  .chips{display:flex;gap:5px;flex-wrap:wrap}.chip{border:1px solid var(--line);background:#0c1822;border-radius:999px;padding:4px 7px;color:#a9bcc7;font-size:10px;cursor:pointer}.chip:hover{border-color:#3a586b}.chip.active{background:#17364a;border-color:#37789b;color:#e1f8ff}.chip .n{color:#688394;margin-left:4px}
+  .seg{display:flex;border:1px solid var(--line2);border-radius:9px;padding:2px;background:#09141c}.seg button{flex:1;height:27px;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;font-size:10px}.seg button.active{background:#173043;color:#e9f7fd;box-shadow:inset 0 0 0 1px #284f67}
+  .rangeRow{display:grid;grid-template-columns:1fr 42px;gap:8px;align-items:center;margin-top:8px}.rangeRow input{width:100%;accent-color:#60c8ed}.rangeVal{text-align:right;color:var(--muted);font:10px ui-monospace,monospace}
+  .analyticBtns{display:grid;grid-template-columns:1fr 1fr;gap:6px}.analyticBtns .btn{justify-content:flex-start;font-size:10px;padding:0 8px}.analyticBtns .btn.wide{grid-column:1/-1}
+  .stage{min-width:0;min-height:0;position:relative;display:grid;grid-template-rows:46px minmax(0,1fr);background:
+    linear-gradient(rgba(70,110,130,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(70,110,130,.035) 1px,transparent 1px);background-size:24px 24px}
+  .stagebar{display:flex;align-items:center;gap:7px;padding:0 10px;border-bottom:1px solid var(--line);background:rgba(7,16,24,.80);z-index:8;overflow-x:auto;scrollbar-width:none}.stagebar::-webkit-scrollbar{display:none}.stat{height:29px;display:flex;align-items:center;gap:6px;padding:0 9px;border:1px solid var(--line);background:#0c1822;border-radius:8px;white-space:nowrap;color:var(--muted);font-size:10px}.stat b{font-size:12px;color:#dbeaf1}.stat.click{cursor:pointer}.stat.click:hover{border-color:#365a70;background:#112431}.spacer{flex:1}.viewchip{height:29px;display:flex;align-items:center;gap:6px;padding:0 9px;border:1px solid #315369;background:#112738;border-radius:999px;color:#d9f3ff;font-size:10px;white-space:nowrap}.viewchip button{background:none;color:#96b9ca;cursor:pointer;padding:0 0 0 3px}
+  .graphwrap{position:relative;min-height:0;overflow:hidden}.graphsvg{width:100%;height:100%;display:block;cursor:grab}.graphsvg:active{cursor:grabbing}.graph-bg{fill:transparent}
+  .edge{fill:none;stroke-width:1.45;opacity:.48;transition:opacity .14s,stroke-width .14s,filter .14s}.edge.blocks{stroke:#5aaed5}.edge.parent-child{stroke:#6c7f8c;stroke-dasharray:5 5;opacity:.28}.edge.discovered-from{stroke:#b189f1;stroke-dasharray:8 4 2 4}.edge.related{stroke:#5bd6c3;stroke-dasharray:2 5}.edge.generic{stroke:#71b9de}.edge.dim{opacity:.06}.edge.hot{opacity:.95;stroke-width:2.4;filter:drop-shadow(0 0 4px rgba(88,191,235,.42))}.edge.critical{stroke:#ffc95f;opacity:.95;stroke-width:2.7;filter:drop-shadow(0 0 4px rgba(255,201,95,.35))}.edge.readyedge{opacity:.12}.edge.hovered{opacity:1;stroke-width:3.1}
+  @keyframes flowdash{to{stroke-dashoffset:-20}}.edge.activeflow{stroke-dasharray:7 5;animation:flowdash .65s linear infinite}
+  .node{cursor:pointer;transition:opacity .15s}.node.dim{opacity:.12}.node.match .nodecard{filter:drop-shadow(0 0 8px rgba(255,211,92,.55));stroke:#e4b94f}.node.selected .nodecard{stroke:#70d9ff;stroke-width:2.2;filter:drop-shadow(0 0 10px rgba(67,177,226,.35))}.node.hot .nodecard{stroke:#62d3f4;stroke-width:1.8}.node.critical .nodecard{stroke:#ffc95f;stroke-width:2.1;filter:drop-shadow(0 0 8px rgba(255,201,95,.23))}.node.ready .nodecard{stroke:#64e3a4;stroke-width:2.2;filter:drop-shadow(0 0 10px rgba(82,222,155,.28))}.node.bottleneck .nodecard{stroke:#c595ff;stroke-width:2.2;filter:drop-shadow(0 0 9px rgba(197,149,255,.25))}
+  .nodecard{fill:#0e1d28;stroke:#294354;stroke-width:1.1;rx:11;transition:.15s}.node.epic .nodecard{fill:#102330;stroke:#3a5b6d;stroke-width:1.5}.node:hover .nodecard{fill:#142936;stroke:#4f7184}.statusbar-node{rx:3}.nodeTitle{fill:#eaf4f8;font-size:11.2px;font-weight:650;pointer-events:none}.nodeId{fill:#758e9d;font-size:8.6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;pointer-events:none}.nodeMeta{fill:#8fa6b4;font-size:8.7px;pointer-events:none}.nodePill{fill:#152d3c;stroke:#294b5f}.nodePillText{fill:#c0d5df;font-size:7.9px;font-weight:700;pointer-events:none}.waveBadge{fill:#172736;stroke:#31495a}.waveText{fill:#86a3b4;font-size:7.4px;font-family:ui-monospace,monospace}
+  .hull{fill-opacity:.022;stroke-opacity:.24;stroke-width:1.2;stroke-dasharray:8 7;pointer-events:none}.hullLabel{font-size:9px;text-transform:uppercase;letter-spacing:.1em;fill:#6f8a98;pointer-events:none}
+  .tooltip{position:fixed;z-index:80;pointer-events:none;max-width:360px;background:#08131b;border:1px solid #355064;border-radius:10px;padding:9px 10px;box-shadow:var(--shadow);display:none}.tooltip.show{display:block}.tooltip b{font-size:11px}.tooltip .tid{font:9px ui-monospace,monospace;color:#718996;margin-top:3px}.tooltip .tmeta{color:#9cb0bb;font-size:9px;margin-top:5px}.tooltip .hint{color:#5f7988;font-size:9px;margin-top:6px}
+  .minimapCard{position:absolute;right:12px;bottom:12px;width:190px;height:118px;background:rgba(8,18,26,.90);border:1px solid #294151;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;z-index:7}.minimapTitle{position:absolute;left:8px;top:5px;color:#667f8d;font-size:8px;text-transform:uppercase;letter-spacing:.12em;z-index:2;pointer-events:none}.minimap{width:100%;height:100%;display:block;cursor:crosshair}.minimap .mnode{fill:#567080;opacity:.55}.minimap .medge{stroke:#4d6a7b;opacity:.24;fill:none;stroke-width:.6}.minimap .viewport{fill:rgba(92,200,240,.05);stroke:#57b9e0;stroke-width:1;rx:3}
+  .zoomdock{position:absolute;left:12px;bottom:12px;display:flex;gap:5px;z-index:7}.zoomdock .btn{background:rgba(10,22,31,.92);box-shadow:0 6px 20px rgba(0,0,0,.20)}
+  .cdnNotice{position:absolute;inset:0;display:grid;place-items:center;z-index:30;background:rgba(7,16,24,.96);color:#9cb2be;text-align:center;padding:24px}.cdnNotice b{display:block;color:#e3f1f7;margin-bottom:5px}.cdnNotice code{font:9px ui-monospace,monospace;color:#bde7f7}.empty{position:absolute;inset:46px 0 0;display:none;place-items:center;z-index:4;pointer-events:none}.empty.show{display:grid}.emptybox{max-width:440px;text-align:center;padding:24px;border:1px solid var(--line);background:#0a151e;border-radius:15px;box-shadow:var(--shadow)}.emptybox h3{margin:0 0 6px;font-size:15px}.emptybox p{margin:0;color:var(--muted);font-size:11px}.emptybox code{font:10px ui-monospace,monospace;color:#c9e7f3}
+  .toast{position:absolute;left:50%;top:60px;transform:translateX(-50%) translateY(-8px);opacity:0;pointer-events:none;transition:.2s;z-index:20;max-width:min(760px,calc(100% - 30px));background:#122330;border:1px solid #375a6f;border-radius:10px;padding:9px 12px;box-shadow:var(--shadow);color:#dbeaf1;font-size:10px}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.error{border-color:#72414a;background:#25171d;color:#ffdfe3}.toast.warn{border-color:#6d5a32;background:#231f14;color:#ffefc7}
+  .legend{position:absolute;right:212px;bottom:12px;background:rgba(8,18,26,.88);border:1px solid var(--line);border-radius:9px;padding:7px 9px;display:flex;gap:10px;z-index:6;color:#8199a6;font-size:8px}.leg{display:flex;align-items:center;gap:5px}.legline{width:18px;height:0;border-top:2px solid}.legline.block{border-color:#5aaed5}.legline.parent{border-color:#6c7f8c;border-top-style:dashed}
+  .inspectEmpty{height:100%;display:grid;place-items:center;text-align:center;color:var(--muted)}.inspectEmpty svg{width:38px;height:38px;opacity:.35;margin-bottom:10px}.inspectEmpty b{display:block;color:#c3d3dc;margin-bottom:3px}.inspectEmpty span{font-size:10px}
+  .inspect{display:none}.inspect.show{display:block}.ihead{display:flex;align-items:flex-start;justify-content:space-between;gap:9px}.ihead h2{font-size:15px;line-height:1.25;margin:0 0 6px}.iid{font:9px ui-monospace,SFMono-Regular,Menlo,monospace;color:#6e8796;word-break:break-all}.badges{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.badge{padding:3px 7px;border-radius:999px;border:1px solid var(--line2);background:#10202c;color:#a8bfca;font-size:9px}.badge.status-open{border-color:#28607a;color:#8adffc}.badge.status-deferred{border-color:#42515b;color:#aab7be}.badge.status-closed{border-color:#2e6d50;color:#86e4ae}.badge.status-in_progress{border-color:#795f30;color:#f4ce7b}.badge.priority{font-weight:800}.readiness{margin:9px 0 12px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#0c1822;display:flex;align-items:center;gap:8px}.readydot{width:9px;height:9px;border-radius:50%;background:#6c7b84}.readiness.ready .readydot{background:var(--green);box-shadow:0 0 9px rgba(101,228,163,.5)}.readiness.blocked .readydot{background:var(--amber)}.readiness b{font-size:10px}.readiness span{display:block;color:var(--muted);font-size:9px;margin-top:1px}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:10px 0 12px}.metric{padding:7px 5px;border:1px solid var(--line);border-radius:8px;background:#0b1721;text-align:center}.metric b{display:block;font-size:13px}.metric span{display:block;color:#738c9a;font-size:8px;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+  .focusBtns{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px}.focusBtns .btn{height:auto;min-height:32px;font-size:9px;padding:6px 7px}.focusBtns .wide{grid-column:1/-1}
+  .tabs{display:flex;border-bottom:1px solid var(--line);margin:4px 0 10px}.tab{padding:7px 8px;background:none;color:#78909d;border-bottom:2px solid transparent;cursor:pointer;font-size:9px}.tab.active{color:#d9edf6;border-color:#57bde6}.tabpane{display:none}.tabpane.active{display:block}.md{color:#b7c8d1;font-size:10px;line-height:1.55}.md h1,.md h2,.md h3{color:#e5f0f5;margin:12px 0 5px;font-size:11px}.md ul{padding-left:18px;margin:5px 0}.md li{margin:3px 0}.md code{font:9px ui-monospace,monospace;background:#142431;border:1px solid #233c4c;border-radius:4px;padding:1px 3px;color:#cbe8f5}.md pre{white-space:pre-wrap;background:#09151e;border:1px solid var(--line);padding:8px;border-radius:7px;color:#a8bfcb}.subhead{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#738d9a;margin:12px 0 6px}.depitem{display:grid;grid-template-columns:1fr auto;gap:6px;padding:7px;border:1px solid var(--line);border-radius:8px;margin:5px 0;background:#0c1822;cursor:pointer}.depitem:hover{border-color:#37586b;background:#102431}.depitem b{font-size:9.5px}.depitem small{display:block;color:#758e9b;margin-top:2px;font-size:8.5px}.edgekind{font-size:8px;color:#6f8794;align-self:center}.raw{white-space:pre-wrap;word-break:break-word;font:8.7px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9db4c0;background:#08141c;border:1px solid var(--line);border-radius:8px;padding:9px}
+  .statusline{display:flex;align-items:center;gap:14px;padding:0 12px;border-top:1px solid #172a36;background:#071018;color:#627b89;font-size:9px}.statusline .ok{color:#72cba0}.statusline .warn{color:#d2b76f}.statusline .right{margin-left:auto}.kbd{font:8px ui-monospace,monospace;border:1px solid #273c4b;border-bottom-color:#39566a;border-radius:4px;padding:1px 4px;color:#8aa2af;background:#0b1821}
+  dialog{padding:0;border:1px solid #355366;border-radius:15px;background:#0b1721;color:var(--text);box-shadow:0 28px 90px rgba(0,0,0,.55);width:min(720px,calc(100vw - 28px));max-height:min(720px,calc(100vh - 28px))}dialog::backdrop{background:rgba(1,7,11,.72);backdrop-filter:blur(4px)}.dialogHead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}.dialogHead h2{font-size:14px;margin:0}.dialogBody{padding:15px}.dialogBody p{margin:0 0 10px;color:var(--muted);font-size:10px}.dropzone{border:1px dashed #3b5b6e;border-radius:10px;padding:16px;text-align:center;background:#0a151e;color:#8ea6b4;margin-bottom:10px;cursor:pointer}.dropzone.drag{border-color:var(--cyan);background:#102a39}.dropzone b{color:#d7eaf2}.inputText{width:100%;height:260px;resize:vertical;border:1px solid var(--line2);background:#07121a;color:#bcd1db;border-radius:10px;padding:10px;outline:none;font:9px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}.inputText:focus{border-color:#4382a2}.dialogActions{display:flex;gap:7px;justify-content:flex-end;margin-top:10px}.parseError{display:none;margin-top:8px;padding:8px;border-radius:8px;border:1px solid #713e48;background:#25171d;color:#ffd5dc;font-size:9px}.parseError.show{display:block}.sourceNote{padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:#0d1c26;margin-bottom:10px;color:#829aa7;font-size:9px}.sourceNote b{color:#b9ced8}.helpgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.helpbox{border:1px solid var(--line);border-radius:10px;background:#0a151e;padding:11px}.helpbox h3{font-size:10px;margin:0 0 5px}.helpbox p{font-size:9px;margin:0;color:#8da5b2}.helpbox code{font:8.5px ui-monospace,monospace;color:#cae5f2}.helpwide{grid-column:1/-1}
+  @media (max-width:1100px){.workspace{grid-template-columns:220px minmax(0,1fr) 310px}.brand{min-width:180px}.brand small{max-width:190px}.legend{display:none}}
+  @media (max-width:850px){#mobileFilters{display:inline-flex}.mobileClose{display:inline-flex}.workspace{grid-template-columns:0 minmax(0,1fr) 0}.sidebar,.inspector{position:absolute;top:58px;bottom:26px;width:min(330px,88vw);z-index:50;box-shadow:var(--shadow);transition:transform .2s}.sidebar{left:0;transform:translateX(-101%)}.inspector{right:0;transform:translateX(101%)}body.show-left .sidebar{transform:none}body.show-right .inspector{transform:none}.topbar{grid-template-columns:auto minmax(100px,1fr) auto}.brand small{display:none}.brand{min-width:0}.topactions .label{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="7" r="2" fill="#67d8ff"/><circle cx="18.5" cy="5.5" r="2" fill="#7aa7ff"/><circle cx="18" cy="18" r="2" fill="#65e4a3"/><circle cx="7" cy="18" r="2" fill="#c298ff"/><path d="M6.8 7.2 16.5 5.8M6.2 8.5l.6 7.5m1.8 1.3 7.5.4m1.8-2 .5-8.1M8.4 16.3l8.2-8.9" stroke="#577a8c" stroke-width="1.3"/></svg></div>
+      <div><strong>Beads Atlas</strong><small id="datasetSubtitle">reviewed issue graph</small></div>
+    </div>
+    <div class="searchwrap">
+      <span class="searchicon">⌕</span>
+      <input id="search" class="search" autocomplete="off" placeholder="Search title, id, label, description…" aria-label="Search issues" />
+      <span class="shortcut">/</span>
+      <div id="searchResults" class="searchresults"></div>
+    </div>
+    <div class="topactions">
+      <button id="mobileFilters" class="btn icon" title="Filters">☷</button>
+      <button id="importBtn" class="btn"><span>＋</span><span class="label">Load data</span></button>
+      <button id="helpBtn" class="btn icon" title="Help and semantics">?</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Graph controls">
+      <div class="section">
+        <div class="sectionhead"><span>Lens</span><span id="lensHint">plan</span></div>
+        <div class="lensgrid" id="lensGrid">
+          <button class="lens active" data-lens="plan"><b>Plan</b><span>Hierarchy + execution</span></button>
+          <button class="lens" data-lens="execution"><b>Execute</b><span>Blocking flow only</span></button>
+          <button class="lens" data-lens="structure"><b>Structure</b><span>Parent → child</span></button>
+          <button class="lens" data-lens="all"><b>All</b><span>Every relation type</span></button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Relationships</span><span id="edgeCountLabel"></span></div>
+        <div id="edgeChecks" class="checklist"></div>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Status</span><span>filter</span></div>
+        <div id="statusChecks" class="checklist"></div>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Issue type</span><span>filter</span></div>
+        <div id="typeChecks" class="checklist"></div>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Priority</span><span>filter</span></div>
+        <div id="priorityChips" class="chips"></div>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Labels</span><span id="labelSelectionHint">any</span></div>
+        <div id="labelChips" class="chips"></div>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Layout</span><span id="layoutTime">—</span></div>
+        <div class="seg" id="orientationSeg"><button class="active" data-value="LR">Left → right</button><button data-value="TB">Top → bottom</button></div>
+        <div style="height:6px"></div>
+        <div class="seg" id="qualitySeg"><button data-value="fast" title="Fast: longest-path layering, DFS decrossing, greedy coordinates">Fast</button><button class="active" data-value="balanced" title="Balanced: simplex layering, two-layer crossing reduction, simplex coordinates">Balanced</button><button data-value="precise" title="Precise: simplex layering, deeper bounded two-layer crossing reduction, quadratic coordinates">Precise</button></div>
+        <div class="rangeRow"><input id="spacingRange" type="range" min="70" max="155" step="5" value="100" aria-label="Graph spacing"/><span id="spacingVal" class="rangeVal">100%</span></div>
+        <label class="check" style="margin-top:5px"><input id="hullsToggle" type="checkbox" checked/><span>Workstream contours</span></label>
+        <label class="check"><input id="wavesToggle" type="checkbox" checked/><span>Execution wave badges</span></label>
+      </div>
+      <div class="section">
+        <div class="sectionhead"><span>Analysis</span><span>one at a time</span></div>
+        <div class="analyticBtns">
+          <button class="btn" data-analysis="critical">◆ Critical path</button>
+          <button class="btn" data-analysis="ready">● Ready now</button>
+          <button class="btn wide" data-analysis="bottleneck">⇢ High fan-out blockers</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="stagebar">
+        <div class="stat"><b id="statNodes">0</b> issues</div>
+        <div class="stat"><b id="statEdges">0</b> visible edges</div>
+        <div id="readyStat" class="stat click" title="Highlight ready work"><b id="statReady">0</b> ready</div>
+        <div id="criticalStat" class="stat click" title="Highlight the longest blocking chain"><b id="statCritical">0</b> critical chain</div>
+        <div class="stat"><b id="statCycles">0</b> cycle nodes</div>
+        <div id="focusChip" class="viewchip" style="display:none"><span id="focusText"></span><button id="clearFocus" aria-label="Clear focus">×</button></div>
+        <div class="spacer"></div>
+        <button id="fitBtnTop" class="btn tiny">Fit <span class="kbd">F</span></button>
+      </div>
+      <div id="graphWrap" class="graphwrap">
+        <div id="cdnNotice" class="cdnNotice"><div><b>Loading the DAG engine…</b><div>D3 v7 + d3-dag 1.x are imported from jsDelivr as requested.</div><div style="margin-top:5px;font-size:9px">If this message remains, the CDN could not be reached. The graph data itself is embedded in this HTML.</div></div></div>
+        <svg id="graph" class="graphsvg" role="img" aria-label="Directed acyclic issue graph">
+          <defs>
+            <marker id="arrow-blocks" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5aaed5"/></marker>
+            <marker id="arrow-parent-child" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#718691"/></marker>
+            <marker id="arrow-discovered-from" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b189f1"/></marker>
+            <marker id="arrow-related" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5bd6c3"/></marker>
+            <marker id="arrow-generic" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71b9de"/></marker>
+          </defs>
+          <rect class="graph-bg" width="100%" height="100%"></rect>
+          <g id="zoomRoot"><g id="hulls"></g><g id="links"></g><g id="nodes"></g></g>
+        </svg>
+        <div id="empty" class="empty"><div class="emptybox"><h3 id="emptyTitle">Nothing to draw</h3><p id="emptyText">Adjust filters or load a graph.</p></div></div>
+        <div id="toast" class="toast"></div>
+        <div class="zoomdock"><button id="zoomOut" class="btn icon" title="Zoom out">−</button><button id="fitBtn" class="btn" title="Fit graph">Fit</button><button id="zoomIn" class="btn icon" title="Zoom in">＋</button></div>
+        <div class="legend"><div class="leg"><span class="legline block"></span>blocks</div><div class="leg"><span class="legline parent"></span>parent-child</div></div>
+        <div class="minimapCard"><div class="minimapTitle">Overview</div><svg id="minimap" class="minimap"></svg></div>
+      </div>
+    </main>
+
+    <aside class="inspector" aria-label="Issue inspector">
+      <div id="inspectEmpty" class="inspectEmpty"><div><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor"/><path d="M12 8v4l3 2" stroke="currentColor"/></svg><b>Select an issue</b><span>Click a node to inspect dependencies,<br/>acceptance criteria, and readiness.</span></div></div>
+      <div id="inspect" class="inspect"></div>
+    </aside>
+  </div>
+
+  <footer class="statusline"><span id="statusSource" class="ok">Bundled reviewed Beads graph</span><span id="statusLayout">Sugiyama / balanced</span><span>Click = inspect · double-click = neighborhood · <span class="kbd">/</span> search · <span class="kbd">F</span> fit · <span class="kbd">Esc</span> clear</span><span class="right" id="statusVisible"></span></footer>
+</div>
+<div id="tooltip" class="tooltip"></div>
+
+<dialog id="importDialog">
+  <div class="dialogHead"><h2>Load a DAG</h2><button class="btn icon" data-close-dialog="importDialog">×</button></div>
+  <div class="dialogBody">
+    <div class="sourceNote"><b>Accepted:</b> Beads <code>issues.jsonl</code>, a JSON array of Beads records, or generic <code>{"nodes":[…],"edges":[…]}</code>. Generic edges preserve <code>source → target</code>. Beads <code>blocks</code> edges are intentionally rendered blocker → blocked.</div>
+    <div id="dropzone" class="dropzone"><b>Drop issues.jsonl / JSON here</b><br/>or click to choose a file<input id="fileInput" type="file" accept=".json,.jsonl,application/json" hidden /></div>
+    <textarea id="dataInput" class="inputText" spellcheck="false" placeholder='{"nodes":[{"id":"node1","label":"Node 1"},{"id":"node2","label":"Node 2"}],"edges":[{"source":"node1","target":"node2"}]}'></textarea>
+    <div id="parseError" class="parseError"></div>
+    <div class="dialogActions"><button id="resetBundled" class="btn">Reset bundled graph</button><button class="btn" data-close-dialog="importDialog">Cancel</button><button id="loadText" class="btn primary">Load graph</button></div>
+  </div>
+</dialog>
+
+<dialog id="helpDialog">
+  <div class="dialogHead"><h2>How Beads Atlas reads the graph</h2><button class="btn icon" data-close-dialog="helpDialog">×</button></div>
+  <div class="dialogBody">
+    <div class="helpgrid">
+      <div class="helpbox"><h3>Blocking flow</h3><p>Beads stores a blocked issue with <code>depends_on_id = blocker</code>. Atlas reverses that storage relation for visualization, rendering <b>blocker → blocked issue</b>. That makes left-to-right flow match implementation order.</p></div>
+      <div class="helpbox"><h3>Hierarchy flow</h3><p><code>parent-child</code> renders <b>parent → child</b>. It is structural, not an execution prerequisite, and uses a dashed edge so it cannot be mistaken for blocking work.</p></div>
+      <div class="helpbox"><h3>No silent cycle fallback</h3><p><code>d3-dag</code> requires a DAG. If selected relationship types create a cycle, Atlas names the cycle and refuses that projection. It never quietly deletes an edge to make layout succeed.</p></div>
+      <div class="helpbox"><h3>Ready work</h3><p>An open issue is “ready” when it has no unresolved incoming <code>blocks</code> edge. Closed/rejected blockers count as resolved. Structural parents do not make a task unready.</p></div>
+      <div class="helpbox helpwide"><h3>Layout + interaction</h3><p>The graph uses <code>d3-dag</code> Sugiyama layered layout, rendered as SVG with D3 v7. Pan/zoom is D3 zoom. The minimap is synchronized to the viewport. Double-click a node to isolate its dependency neighborhood; use the inspector for full upstream/downstream traces.</p></div>
+    </div>
+  </div>
+</dialog>
+
+<script type="module">
+  import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+  import * as dag from "https://cdn.jsdelivr.net/npm/d3-dag@1/+esm";
+
+  const BUNDLED_JSONL = __BEADS_ATLAS_BUNDLED_JSONL__;
+  const BUNDLED_NAME = __BEADS_ATLAS_BUNDLED_NAME__;
+
+  const STATUS_COLORS = {open:"#57d8ff",in_progress:"#f3c86b",closed:"#65e4a3",deferred:"#71828d",rejected:"#ff7b8c"};
+  const EDGE_COLORS = {blocks:"#5aaed5","parent-child":"#718691","discovered-from":"#b189f1",related:"#5bd6c3",generic:"#71b9de"};
+  const EDGE_LABELS = {blocks:"blocks","parent-child":"parent → child","discovered-from":"discovered from",related:"related",generic:"dependency"};
+  const NODE_W = 236, NODE_H = 78, EPIC_H = 84;
+  const state = {
+    sourceName:BUNDLED_NAME, model:null, lens:"plan", edgeTypes:new Set(), statuses:new Set(), types:new Set(), priorities:new Set(), labels:new Set(),
+    orientation:"LR", quality:"balanced", spacing:1, hulls:true, waves:true, selectedId:null, focusSet:null, focusLabel:"", analysis:null,
+    search:"", searchMatches:[], searchIndex:0, currentTransform:d3.zoomIdentity, graphBounds:null, visible:null, criticalPath:[], readySet:new Set(), waveMap:new Map(), currentCycle:null
+  };
+
+  const els = Object.fromEntries(Array.from(document.querySelectorAll('[id]')).map(el=>[el.id,el]));
+  els.cdnNotice.style.display="none";
+  const svg = d3.select(els.graph), zoomRoot=d3.select(els.zoomRoot), hullLayer=d3.select(els.hulls), linkLayer=d3.select(els.links), nodeLayer=d3.select(els.nodes);
+  const tooltip = d3.select(els.tooltip);
+  let zoom;
+
+  function esc(s){return String(s??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+  function md(s){
+    const safe=esc(s||"");
+    return safe.split(/\n/).map(line=>{
+      const h=line.match(/^(#{1,4})\s+(.+)/); if(h) return `<h3>${inline(h[2])}</h3>`;
+      if(/^\s*[-*]\s+/.test(line)) return `<li>${inline(line.replace(/^\s*[-*]\s+/,''))}</li>`;
+      if(!line.trim()) return '<div style="height:5px"></div>';
+      return `<div>${inline(line)}</div>`;
+    }).join('').replace(/(?:<li>.*?<\/li>)+/g,m=>`<ul>${m}</ul>`);
+  }
+  function inline(s){return s.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');}
+  function shortId(id){const parts=String(id).split('-'); const tail=parts[parts.length-1]; return tail.length<28?tail:id.slice(-28);}
+  function human(s){return String(s??'').replaceAll('_',' ').replace(/\b\w/g,m=>m.toUpperCase());}
+  function stableHue(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h;}
+  function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+
+  function parseInput(text, sourceName="input"){
+    const t=text.trim(); if(!t) throw new Error("Input is empty.");
+    let parsed=null, records=null;
+    try{parsed=JSON.parse(t);}catch{}
+    if(parsed && !Array.isArray(parsed) && Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)){
+      const nodes=parsed.nodes.map((n,i)=>{if(!n||typeof n!=="object"||n.id==null||!String(n.id).trim())throw new Error(`Generic node ${i+1} is missing a non-empty \`id\`.`);return {id:String(n.id),label:String(n.label??n.title??n.id),status:n.status??"open",issue_type:n.issue_type??n.type??"node",priority:n.priority??null,labels:Array.isArray(n.labels)?n.labels:[],description:n.description??"",acceptance_criteria:n.acceptance_criteria??"",raw:n}});
+      const ids=nodes.map(n=>n.id), duplicateIds=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
+      if(duplicateIds.length) throw new Error(`Duplicate node id(s): ${duplicateIds.slice(0,6).join(', ')}${duplicateIds.length>6?'…':''}`);
+      const known=new Set(ids);
+      const edges=parsed.edges.map((e,i)=>{if(!e||typeof e!=="object"||e.source==null||e.target==null)throw new Error(`Generic edge ${i+1} must define \`source\` and \`target\`.`);return {id:`e${i}`,source:String(e.source),target:String(e.target),type:String(e.type??"generic"),raw:e}});
+      const missing=[...new Set(edges.flatMap(e=>[e.source,e.target]).filter(id=>!known.has(id)))];
+      if(missing.length) throw new Error(`Edges reference missing node id(s): ${missing.slice(0,6).join(', ')}${missing.length>6?'…':''}`);
+      return finalizeModel(nodes,edges,sourceName,"generic");
+    }
+    if(Array.isArray(parsed)) records=parsed;
+    else if(parsed && typeof parsed==='object' && parsed.id) records=[parsed];
+    else {
+      const lines=t.split(/\r?\n/).filter(x=>x.trim());
+      try{records=lines.map((line,i)=>{try{return JSON.parse(line)}catch(e){throw new Error(`JSONL line ${i+1}: ${e.message}`)}})}catch(e){throw e}
+    }
+    if(!records?.length || !records.every(r=>r && typeof r==='object' && r.id!=null && String(r.id).trim())) throw new Error("Expected Beads records with a non-empty `id`, or generic {nodes, edges} JSON.");
+    const nodes=records.map(r=>({id:String(r.id),label:String(r.title??r.label??r.id),status:r.status??"open",issue_type:r.issue_type??r.type??"task",priority:r.priority??null,labels:Array.isArray(r.labels)?r.labels:[],description:r.description??"",acceptance_criteria:r.acceptance_criteria??"",notes:r.notes??"",raw:r}));
+    const ids=nodes.map(n=>n.id), duplicateIds=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
+    if(duplicateIds.length) throw new Error(`Duplicate Beads issue id(s): ${duplicateIds.slice(0,6).join(', ')}${duplicateIds.length>6?'…':''}`);
+    const known=new Set(ids); const edges=[]; const dangling=[]; let k=0;
+    for(const r of records){
+      if(r.dependencies!=null && !Array.isArray(r.dependencies)) throw new Error(`Issue ${r.id} has a non-array \`dependencies\` field.`);
+      for(const dep of (r.dependencies||[])){
+        if(!dep||typeof dep!=="object"||dep.depends_on_id==null||!String(dep.depends_on_id).trim()) throw new Error(`Issue ${r.id} has a dependency without a non-empty \`depends_on_id\`.`);
+        const typ=String(dep.type??"generic"), other=String(dep.depends_on_id); if(!known.has(other)){dangling.push(`${r.id} → ${other} (${typ})`);continue}
+        const source=other,target=String(r.id);
+        edges.push({id:`e${k++}`,source,target,type:typ,raw:dep,storageDirection:{issue:String(r.id),dependsOn:other}});
+      }
+    }
+    if(dangling.length) throw new Error(`Dependencies reference missing issue id(s): ${dangling.slice(0,4).join('; ')}${dangling.length>4?'…':''}`);
+    return finalizeModel(nodes,edges,sourceName,"beads");
+  }
+
+  function finalizeModel(nodes,edges,sourceName,format){
+    const byId=new Map(nodes.map(n=>[n.id,n]));
+    const incoming=new Map(nodes.map(n=>[n.id,[]])), outgoing=new Map(nodes.map(n=>[n.id,[]]));
+    for(const e of edges){incoming.get(e.target)?.push(e);outgoing.get(e.source)?.push(e)}
+    const edgeTypes=[...new Set(edges.map(e=>e.type))].sort((a,b)=>a==="blocks"?-1:b==="blocks"?1:a.localeCompare(b));
+    return {nodes,edges,byId,incoming,outgoing,edgeTypes,sourceName,format};
+  }
+
+  function loadModel(model, preserve=false){
+    state.model=model;state.sourceName=model.sourceName;state.selectedId=null;state.focusSet=null;state.focusLabel="";state.analysis=null;state.search="";els.search.value="";
+    state.edgeTypes=new Set(model.edgeTypes); state.statuses=new Set(model.nodes.map(n=>String(n.status))); state.types=new Set(model.nodes.map(n=>String(n.issue_type))); state.priorities=new Set(model.nodes.map(n=>String(n.priority)));
+    setLens(model.format==="beads"?"plan":"all",false); buildControls(); computeGlobalAnalytics(); updateSearch(); render(true); updateDatasetHeader();
+  }
+
+  function updateDatasetHeader(){
+    const m=state.model; els.datasetSubtitle.textContent=`${m.nodes.length} issues · ${m.edges.length} relations · ${state.sourceName}`; els.statusSource.textContent=state.sourceName; els.statusSource.title=state.sourceName;
+  }
+
+  function countBy(field){const c=new Map();for(const n of state.model.nodes){const v=String(n[field]);c.set(v,(c.get(v)||0)+1)}return c}
+  function buildControls(){
+    const m=state.model, sc=countBy('status'), tc=countBy('issue_type'), pc=countBy('priority');
+    els.edgeChecks.innerHTML=m.edgeTypes.map(t=>`<label class="check"><input type="checkbox" data-edge="${esc(t)}" ${state.edgeTypes.has(t)?'checked':''}/><span class="swatch" style="background:${EDGE_COLORS[t]||EDGE_COLORS.generic}"></span><span>${esc(EDGE_LABELS[t]||t)}</span><span class="count">${m.edges.filter(e=>e.type===t).length}</span></label>`).join('');
+    els.statusChecks.innerHTML=[...sc.entries()].sort().map(([s,n])=>`<label class="check"><input type="checkbox" data-status="${esc(s)}" checked/><span class="swatch" style="background:${STATUS_COLORS[s]||'#8193a0'}"></span><span>${esc(human(s))}</span><span class="count">${n}</span></label>`).join('');
+    els.typeChecks.innerHTML=[...tc.entries()].sort().map(([s,n])=>`<label class="check"><input type="checkbox" data-type="${esc(s)}" checked/><span>${s==='epic'?'◇':'□'}</span><span>${esc(human(s))}</span><span class="count">${n}</span></label>`).join('');
+    els.priorityChips.innerHTML=[...pc.entries()].sort((a,b)=>(a[0]==='null'?1:b[0]==='null'?-1:Number(a[0])-Number(b[0]))).map(([p,n])=>`<button class="chip active" data-priority="${esc(p)}">${p==='null'?'No priority':`P${esc(p)}`} <span class="n">${n}</span></button>`).join('');
+    const lc=new Map();for(const node of m.nodes)for(const l of node.labels)lc.set(l,(lc.get(l)||0)+1);
+    els.labelChips.innerHTML=[...lc.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([l,n])=>`<button class="chip" data-label="${esc(l)}">${esc(l)} <span class="n">${n}</span></button>`).join('');
+    els.edgeCountLabel.textContent=`${m.edges.length} total`;
+  }
+
+  function setLens(lens,rerender=true){
+    state.lens=lens; document.querySelectorAll('.lens').forEach(b=>b.classList.toggle('active',b.dataset.lens===lens)); els.lensHint.textContent=lens;
+    const avail=new Set(state.model?.edgeTypes||[]);
+    if(lens==='plan') state.edgeTypes=new Set(['blocks','parent-child'].filter(t=>avail.has(t)));
+    else if(lens==='execution') state.edgeTypes=new Set(['blocks'].filter(t=>avail.has(t)));
+    else if(lens==='structure') state.edgeTypes=new Set(['parent-child'].filter(t=>avail.has(t)));
+    else state.edgeTypes=new Set(avail);
+    document.querySelectorAll('[data-edge]').forEach(x=>x.checked=state.edgeTypes.has(x.dataset.edge));
+    if(rerender) render(true);
+  }
+
+  function filteredNodes(){
+    let nodes=state.model.nodes.filter(n=>state.statuses.has(String(n.status))&&state.types.has(String(n.issue_type))&&state.priorities.has(String(n.priority))&&(state.labels.size===0||n.labels.some(l=>state.labels.has(l))));
+    if(state.lens==='execution' && state.model.format==='beads'){
+      const blockIds=new Set(state.model.edges.filter(e=>e.type==='blocks').flatMap(e=>[e.source,e.target]));
+      nodes=nodes.filter(n=>n.status==='open'||blockIds.has(n.id));
+    }
+    if(state.focusSet) nodes=nodes.filter(n=>state.focusSet.has(n.id));
+    return nodes;
+  }
+
+  function cycleInfo(nodeIds,edges){
+    const ids=new Set(nodeIds), indeg=new Map([...ids].map(i=>[i,0])), adj=new Map([...ids].map(i=>[i,[]]));
+    for(const e of edges){if(!ids.has(e.source)||!ids.has(e.target))continue;if(e.source===e.target)return {count:1,path:[e.source,e.target]};indeg.set(e.target,(indeg.get(e.target)||0)+1);adj.get(e.source).push(e.target)}
+    const q=[...ids].filter(i=>indeg.get(i)===0), topo=[];while(q.length){const n=q.shift();topo.push(n);for(const v of adj.get(n)){indeg.set(v,indeg.get(v)-1);if(indeg.get(v)===0)q.push(v)}}
+    if(topo.length===ids.size)return {count:0,path:[]};
+    const cyclic=new Set([...ids].filter(i=>indeg.get(i)>0)), color=new Map(); let found=[];
+    for(const start of cyclic){
+      if(color.get(start))continue;
+      color.set(start,1);const path=[start],pos=new Map([[start,0]]),frames=[[start,0]];
+      while(frames.length&&!found.length){const frame=frames[frames.length-1],u=frame[0],neighbors=(adj.get(u)||[]).filter(v=>cyclic.has(v));if(frame[1]>=neighbors.length){frames.pop();color.set(u,2);pos.delete(u);path.pop();continue}const v=neighbors[frame[1]++];if(color.get(v)===1){found=path.slice(pos.get(v)).concat(v);break}if(!color.get(v)){color.set(v,1);pos.set(v,path.length);path.push(v);frames.push([v,0])}}
+      if(found.length)break;
+    }
+    return {count:cyclic.size,path:found};
+  }
+
+  function visibleProjection(){
+    const nodes=filteredNodes(), ids=new Set(nodes.map(n=>n.id));
+    const edges=state.model.edges.filter(e=>state.edgeTypes.has(e.type)&&ids.has(e.source)&&ids.has(e.target));
+    const cyc=cycleInfo(ids,edges);return {nodes,edges,ids,cycle:cyc};
+  }
+
+  function nodeHeight(n){return n.issue_type==='epic'?EPIC_H:NODE_H}
+  function render(resetFit=false){
+    if(!state.model)return; const vis=visibleProjection(); state.visible=vis; state.currentCycle=vis.cycle;
+    els.statNodes.textContent=vis.nodes.length;els.statEdges.textContent=vis.edges.length;els.statCycles.textContent=vis.cycle.count;els.statusVisible.textContent=`${vis.nodes.length}/${state.model.nodes.length} issues visible`;
+    if(vis.cycle.count){
+      nodeLayer.selectAll('*').remove();linkLayer.selectAll('*').remove();hullLayer.selectAll('*').remove();els.empty.classList.add('show');els.emptyTitle.textContent='Selected projection is cyclic';els.emptyText.innerHTML=`d3-dag requires a DAG. Cycle: <code>${esc(vis.cycle.path.map(shortId).join(' → ')||'detected')}</code>. Disable a relationship type or adjust the input.`;showToast(`Cycle detected: ${vis.cycle.path.map(shortId).join(' → ')||vis.cycle.count+' cyclic nodes'}`,'error',5000);updateStats();return;
+    }
+    if(!vis.nodes.length){nodeLayer.selectAll('*').remove();linkLayer.selectAll('*').remove();hullLayer.selectAll('*').remove();els.empty.classList.add('show');els.emptyTitle.textContent='No issues match the current filters';els.emptyText.textContent='Clear a focus/filter or load another graph.';updateStats();return}else els.empty.classList.remove('show');
+    const idSet=vis.ids; const linksData=vis.edges.map(e=>({...e}));
+    for(const n of vis.nodes) linksData.push({id:`single:${n.id}`,source:n.id,target:n.id,type:'__single',__single:true});
+    const connect=dag.graphConnect().sourceId(d=>d.source).targetId(d=>d.target).nodeDatum(id=>id).single(true);
+    // Validate topology once up front. Layout retries below rebuild the graph so a failed
+    // operator can never leave partially-mutated coordinates behind for the fallback.
+    try{connect(linksData)}catch(e){showToast(`Graph construction failed: ${e.message}`,'error',5000);return}
+    const nodeSize=(gn)=>{const n=state.model.byId.get(gn.data);return state.orientation==='LR'?[nodeHeight(n),NODE_W]:[NODE_W,nodeHeight(n)]};
+    const gap=state.orientation==='LR'?[22*state.spacing,70*state.spacing]:[34*state.spacing,62*state.spacing];
+
+    function layoutOperator(quality){
+      let op=dag.sugiyama().nodeSize(nodeSize).gap(gap).tweaks([dag.tweakSugiyama(nodeSize)]);
+      if(quality==='fast'){
+        return op.layering(dag.layeringLongestPath()).decross(dag.decrossDfs()).coord(dag.coordGreedy());
+      }
+      if(quality==='precise'){
+        // Global decrossOpt solves an NP-complete ILP and intentionally refuses many
+        // modest-looking DAGs after Sugiyama inserts long-edge nodes. "Precise" should
+        // mean more bounded work, not "risk freezing the browser". Two-layer decrossing
+        // is d3-dag's large-DAG heuristic; extra passes + coordQuad spend more time safely.
+        return op.layering(dag.layeringSimplex()).decross(dag.decrossTwoLayer().passes(64)).coord(dag.coordQuad());
+      }
+      return op.layering(dag.layeringSimplex()).decross(dag.decrossTwoLayer()).coord(dag.coordSimplex());
+    }
+
+    const attempts=state.quality==='precise'?['precise','balanced','fast']:state.quality==='balanced'?['balanced','fast']:['fast'];
+    let grf,result,ms,effectiveQuality=null,lastError=null;
+    for(const quality of attempts){
+      try{
+        const candidate=connect(linksData);
+        const t0=performance.now();
+        const candidateResult=layoutOperator(quality)(candidate);
+        ms=performance.now()-t0;grf=candidate;result=candidateResult;effectiveQuality=quality;break;
+      }catch(e){lastError=e;console.warn(`Beads Atlas: ${quality} Sugiyama layout failed; trying fallback`,e)}
+    }
+    if(!effectiveQuality){showToast(`Sugiyama layout failed in all quality modes: ${lastError?.message||'unknown error'}`,'error',6500);return}
+    if(effectiveQuality!==state.quality){showToast(`${human(state.quality)} layout could not complete; rendered ${human(effectiveQuality)} instead.`,'warn',4500)}
+    els.layoutTime.textContent=`${ms.toFixed(1)} ms`;els.statusLayout.textContent=`Sugiyama / ${effectiveQuality}${effectiveQuality!==state.quality?` (fallback from ${state.quality})`:''} / ${state.orientation}`;
+    const positions=new Map();for(const gn of grf.nodes()){
+      const n=state.model.byId.get(gn.data);const x=state.orientation==='LR'?gn.y:gn.x,y=state.orientation==='LR'?gn.x:gn.y;positions.set(gn.data,{x,y,w:NODE_W,h:nodeHeight(n)});
+    }
+    const edgeGeom=new Map();for(const l of grf.links()){
+      if(l.data.__single)continue; const pts=l.points.map(([x,y])=>state.orientation==='LR'?[y,x]:[x,y]);edgeGeom.set(l.data.id,pts);
+    }
+    computeGlobalAnalytics(); drawGraph(vis,positions,edgeGeom); updateStats(); updateInspector(); updateMinimap();
+    if(resetFit || !state.graphBounds) requestAnimationFrame(()=>fitGraph(false)); else updateMinimapViewport();
+  }
+
+  function drawGraph(vis,pos,edgeGeom){
+    const criticalEdges=new Set();for(let i=1;i<state.criticalPath.length;i++)criticalEdges.add(`${state.criticalPath[i-1]}→${state.criticalPath[i]}`);
+    const selectionNeighborhood=state.selectedId?new Set([state.selectedId,...neighbors(state.selectedId,'all',false)]):null;
+    const line=d3.line().curve(d3.curveCatmullRom.alpha(.45));
+    const edges=linkLayer.selectAll('path.edge').data(vis.edges,d=>d.id).join('path').attr('class',d=>`edge ${cssClass(d.type)}`).attr('stroke',d=>EDGE_COLORS[d.type]||EDGE_COLORS.generic).attr('d',d=>line(edgeGeom.get(d.id)||[[pos.get(d.source)?.x||0,pos.get(d.source)?.y||0],[pos.get(d.target)?.x||0,pos.get(d.target)?.y||0]])).attr('marker-end',d=>`url(#arrow-${markerType(d.type)})`)
+      .classed('critical',d=>state.analysis==='critical'&&criticalEdges.has(`${d.source}→${d.target}`)).classed('dim',d=>shouldDimEdge(d,selectionNeighborhood,criticalEdges))
+      .on('mouseenter',(ev,d)=>{d3.select(ev.currentTarget).classed('hovered',true);showEdgeTooltip(ev,d)}).on('mousemove',(ev)=>moveTooltip(ev)).on('mouseleave',(ev)=>{d3.select(ev.currentTarget).classed('hovered',false);hideTooltip()});
+    const nodes=nodeLayer.selectAll('g.node').data(vis.nodes,d=>d.id).join(enter=>{const g=enter.append('g').attr('class','node');g.append('rect').attr('class','nodecard');g.append('rect').attr('class','statusbar-node');g.append('text').attr('class','nodeTitle');g.append('text').attr('class','nodeId');g.append('rect').attr('class','nodePill');g.append('text').attr('class','nodePillText');g.append('g').attr('class','waveGroup');return g;});
+    nodes.attr('class',d=>`node ${cssClass(d.issue_type)}`).attr('transform',d=>`translate(${pos.get(d.id).x-NODE_W/2},${pos.get(d.id).y-nodeHeight(d)/2})`)
+      .classed('selected',d=>d.id===state.selectedId).classed('match',d=>state.searchMatches.includes(d.id)).classed('hot',d=>selectionNeighborhood?.has(d.id)&&d.id!==state.selectedId)
+      .classed('critical',d=>state.analysis==='critical'&&state.criticalPath.includes(d.id)).classed('ready',d=>state.analysis==='ready'&&state.readySet.has(d.id)).classed('bottleneck',d=>state.analysis==='bottleneck'&&bottleneckIds().has(d.id)).classed('dim',d=>shouldDimNode(d,selectionNeighborhood));
+    nodes.select('.nodecard').attr('width',NODE_W).attr('height',d=>nodeHeight(d)).attr('rx',11);
+    nodes.select('.statusbar-node').attr('x',0).attr('y',8).attr('width',4).attr('height',d=>nodeHeight(d)-16).attr('fill',d=>STATUS_COLORS[d.status]||'#7b909d');
+    nodes.select('.nodeTitle').attr('x',14).attr('y',19).each(function(d){const lines=wrapTitle(d.label,31,2);const t=d3.select(this);t.selectAll('tspan').remove();lines.forEach((s,i)=>t.append('tspan').attr('x',14).attr('dy',i?14:0).text(s))});
+    nodes.select('.nodeId').attr('x',14).attr('y',d=>nodeHeight(d)-10).text(d=>shortId(d.id));
+    nodes.select('.nodePill').attr('x',NODE_W-47).attr('y',9).attr('width',35).attr('height',15).attr('rx',7);
+    nodes.select('.nodePillText').attr('x',NODE_W-29.5).attr('y',19.5).attr('text-anchor','middle').text(d=>d.priority==null?'—':`P${d.priority}`);
+    nodes.select('.waveGroup').each(function(d){const g=d3.select(this);g.selectAll('*').remove();if(!state.waves||!state.waveMap.has(d.id))return;g.append('rect').attr('class','waveBadge').attr('x',NODE_W-47).attr('y',nodeHeight(d)-24).attr('width',35).attr('height',14).attr('rx',6);g.append('text').attr('class','waveText').attr('x',NODE_W-29.5).attr('y',nodeHeight(d)-14.5).attr('text-anchor','middle').text(`W${state.waveMap.get(d.id)}`)});
+    nodes.on('click',(ev,d)=>{ev.stopPropagation();selectNode(d.id,true)}).on('dblclick',(ev,d)=>{ev.stopPropagation();focusNeighborhood(d.id)}).on('mouseenter',(ev,d)=>showNodeTooltip(ev,d)).on('mousemove',(ev)=>moveTooltip(ev)).on('mouseleave',hideTooltip);
+    svg.on('click',()=>{state.selectedId=null;updateInspector();renderHighlightsOnly()});
+    drawHulls(vis,pos);
+    const xs=[],ys=[];for(const [id,p] of pos){xs.push(p.x-NODE_W/2,p.x+NODE_W/2);ys.push(p.y-p.h/2,p.y+p.h/2)}state.graphBounds={minX:Math.min(...xs)-50,maxX:Math.max(...xs)+50,minY:Math.min(...ys)-50,maxY:Math.max(...ys)+50};
+  }
+
+  function cssClass(s){return String(s).replace(/[^a-zA-Z0-9_-]/g,'-')}
+  function markerType(t){return ['blocks','parent-child','discovered-from','related'].includes(t)?t:'generic'}
+  function wrapTitle(s,max=31,maxLines=2){const words=String(s).split(/\s+/),lines=[];let line='';for(const w of words){const next=line?line+' '+w:w;if(next.length<=max)line=next;else{if(line)lines.push(line);line=w;if(lines.length===maxLines-1)break}}if(lines.length<maxLines&&line)lines.push(line);const consumed=lines.join(' ').length;if(consumed<String(s).length)lines[lines.length-1]=lines[lines.length-1].replace(/[.…]*$/,'')+'…';return lines}
+
+  function drawHulls(vis,pos){hullLayer.selectAll('*').remove();if(!state.hulls||state.model.format!=='beads'||state.lens==='execution')return;
+    const parentEdge=state.model.edges.filter(e=>e.type==='parent-child'),parent=new Map(parentEdge.map(e=>[e.target,e.source])); const root=state.model.nodes.find(n=>!parent.has(n.id))?.id;
+    const topGroup=new Map();for(const n of vis.nodes){let cur=n.id,prev=cur;while(parent.has(cur)&&parent.get(cur)!==root){cur=parent.get(cur);prev=cur}if(parent.get(cur)===root)topGroup.set(n.id,cur);else if(cur!==root)topGroup.set(n.id,cur)}
+    const groups=d3.group(vis.nodes.filter(n=>topGroup.has(n.id)),n=>topGroup.get(n.id));
+    for(const [gid,arr] of groups){if(arr.length<2)continue;const pts=[];for(const n of arr){const p=pos.get(n.id),w=NODE_W/2+15,h=nodeHeight(n)/2+15;pts.push([p.x-w,p.y-h],[p.x+w,p.y-h],[p.x+w,p.y+h],[p.x-w,p.y+h])}const hull=d3.polygonHull(pts);if(!hull)continue;const hue=stableHue(gid), path=d3.line().curve(d3.curveCardinalClosed.tension(.65))(hull);hullLayer.append('path').attr('class','hull').attr('d',path).attr('fill',`hsl(${hue} 50% 55%)`).attr('stroke',`hsl(${hue} 55% 62%)`);const minX=d3.min(hull,d=>d[0]),minY=d3.min(hull,d=>d[1]);hullLayer.append('text').attr('class','hullLabel').attr('x',minX+8).attr('y',minY-5).text(state.model.byId.get(gid)?.label||shortId(gid))}
+  }
+
+  function executionEdges(){
+    if(!state.model) return [];
+    const blocks=state.model.edges.filter(e=>e.type==='blocks');
+    if(blocks.length) return blocks;
+    const nonStructural=state.model.edges.filter(e=>!['parent-child','related','discovered-from'].includes(e.type));
+    return nonStructural.length?nonStructural:state.model.edges;
+  }
+  function computeGlobalAnalytics(){if(!state.model)return;const nodes=state.model.nodes, ids=new Set(nodes.map(n=>n.id)), blocks=executionEdges();
+    const indeg=new Map(nodes.map(n=>[n.id,0])),adj=new Map(nodes.map(n=>[n.id,[]]));for(const e of blocks){if(ids.has(e.source)&&ids.has(e.target)){indeg.set(e.target,indeg.get(e.target)+1);adj.get(e.source).push(e.target)}}
+    const q=[...ids].filter(i=>indeg.get(i)===0),topo=[];while(q.length){const n=q.shift();topo.push(n);for(const v of adj.get(n)){indeg.set(v,indeg.get(v)-1);if(indeg.get(v)===0)q.push(v)}}
+    const dist=new Map(nodes.map(n=>[n.id,1])),prev=new Map(),wave=new Map(nodes.map(n=>[n.id,0]));for(const u of topo){for(const v of adj.get(u)){if((dist.get(u)+1)>dist.get(v)){dist.set(v,dist.get(u)+1);prev.set(v,u)}wave.set(v,Math.max(wave.get(v),wave.get(u)+1))}}
+    let end=nodes[0]?.id;for(const n of nodes)if(dist.get(n.id)>dist.get(end))end=n.id;const path=[];while(end){path.push(end);if(!prev.has(end))break;end=prev.get(end)}state.criticalPath=path.reverse();state.waveMap=wave;
+    const by=state.model.byId;state.readySet=new Set(nodes.filter(n=>n.status==='open').filter(n=>{const inc=blocks.filter(e=>e.target===n.id);return inc.every(e=>['closed','rejected'].includes(by.get(e.source)?.status))}).map(n=>n.id));
+  }
+  function bottleneckIds(){if(!state.model)return new Set();const counts=new Map();for(const e of executionEdges())counts.set(e.source,(counts.get(e.source)||0)+1);const vals=[...counts.values()].sort((a,b)=>b-a),threshold=Math.max(2,vals[Math.min(4,vals.length-1)]||2);return new Set([...counts].filter(([,n])=>n>=threshold).map(([id])=>id))}
+  function updateStats(){els.statReady.textContent=state.readySet.size;els.statCritical.textContent=state.criticalPath.length;document.querySelectorAll('[data-analysis]').forEach(b=>b.classList.toggle('active',b.dataset.analysis===state.analysis));}
+
+  function neighbors(id,mode='all',transitive=false){const edges=executionEdges(),seen=new Set(),front=[id];while(front.length){const u=front.shift();for(const e of edges){let v=null;if((mode==='up'||mode==='all')&&e.target===u)v=e.source;if((mode==='down'||mode==='all')&&e.source===u)v=e.target;if(v&&!seen.has(v)&&v!==id){seen.add(v);if(transitive)front.push(v)}}if(!transitive)break}return [...seen]}
+  function focusNeighborhood(id){const set=new Set([id,...neighbors(id,'all',true)]);state.focusSet=set;state.focusLabel=`Neighborhood · ${shortId(id)}`;render(true)}
+  function focusDirection(id,mode){const set=new Set([id,...neighbors(id,mode,true)]);state.focusSet=set;state.focusLabel=`${mode==='up'?'Prerequisites':'Impact'} · ${shortId(id)}`;render(true)}
+  function clearFocus(){state.focusSet=null;state.focusLabel='';render(true)}
+
+  function shouldDimNode(d,selectionNeighborhood){if(state.analysis==='critical')return !state.criticalPath.includes(d.id);if(state.analysis==='ready')return !state.readySet.has(d.id);if(state.analysis==='bottleneck')return !bottleneckIds().has(d.id);if(selectionNeighborhood)return !selectionNeighborhood.has(d.id);return false}
+  function shouldDimEdge(d,selectionNeighborhood,criticalEdges){if(state.analysis==='critical')return !criticalEdges.has(`${d.source}→${d.target}`);if(state.analysis==='ready')return !(state.readySet.has(d.source)||state.readySet.has(d.target));if(state.analysis==='bottleneck'){const b=bottleneckIds();return !(b.has(d.source)||b.has(d.target))}if(selectionNeighborhood)return !(selectionNeighborhood.has(d.source)&&selectionNeighborhood.has(d.target));return false}
+  function renderHighlightsOnly(){if(!state.visible)return;const neigh=state.selectedId?new Set([state.selectedId,...neighbors(state.selectedId,'all',false)]):null,critEdges=new Set();for(let i=1;i<state.criticalPath.length;i++)critEdges.add(`${state.criticalPath[i-1]}→${state.criticalPath[i]}`);
+    nodeLayer.selectAll('g.node').classed('selected',d=>d.id===state.selectedId).classed('hot',d=>neigh?.has(d.id)&&d.id!==state.selectedId).classed('match',d=>state.searchMatches.includes(d.id)).classed('critical',d=>state.analysis==='critical'&&state.criticalPath.includes(d.id)).classed('ready',d=>state.analysis==='ready'&&state.readySet.has(d.id)).classed('bottleneck',d=>state.analysis==='bottleneck'&&bottleneckIds().has(d.id)).classed('dim',d=>shouldDimNode(d,neigh));
+    linkLayer.selectAll('path.edge').classed('hot',d=>state.selectedId&&(d.source===state.selectedId||d.target===state.selectedId)).classed('activeflow',d=>state.selectedId&&(d.source===state.selectedId||d.target===state.selectedId)).classed('critical',d=>state.analysis==='critical'&&critEdges.has(`${d.source}→${d.target}`)).classed('dim',d=>shouldDimEdge(d,neigh,critEdges));
+  }
+
+  function selectNode(id,center=false){state.selectedId=id;updateInspector();renderHighlightsOnly();if(innerWidth<=850){document.body.classList.remove('show-left');document.body.classList.add('show-right')}if(center)centerOnNode(id)}
+  function centerOnNode(id){const node=nodeLayer.selectAll('g.node').filter(d=>d.id===id);if(node.empty())return;const tr=node.attr('transform').match(/translate\(([^,]+),([^\)]+)\)/);if(!tr)return;const n=state.model.byId.get(id),x=+tr[1]+NODE_W/2,y=+tr[2]+nodeHeight(n)/2;const box=els.graphWrap.getBoundingClientRect(),k=Math.max(state.currentTransform.k,.75);svg.transition().duration(350).call(zoom.transform,d3.zoomIdentity.translate(box.width/2-x*k,box.height/2-y*k).scale(k))}
+
+  function updateInspector(){const id=state.selectedId,n=id&&state.model.byId.get(id);els.inspectEmpty.style.display=n?'none':'grid';els.inspect.classList.toggle('show',!!n);if(!n)return;
+    const execEdges=executionEdges(),blocksIn=execEdges.filter(e=>e.target===id),blocksOut=execEdges.filter(e=>e.source===id),children=state.model.edges.filter(e=>e.type==='parent-child'&&e.source===id),parent=state.model.edges.find(e=>e.type==='parent-child'&&e.target===id);
+    const unresolved=blocksIn.filter(e=>!['closed','rejected'].includes(state.model.byId.get(e.source)?.status));const isReady=n.status==='open'&&unresolved.length===0;const critIdx=state.criticalPath.indexOf(id);
+    els.inspect.innerHTML=`<div class="ihead"><div><h2>${esc(n.label)}</h2><div class="iid">${esc(n.id)}</div></div><div style="display:flex;gap:5px"><button class="btn tiny" data-copy-id="${esc(n.id)}">Copy id</button><button class="btn icon tiny mobileClose" data-close-inspector="1">×</button></div></div>
+      <div class="badges"><span class="badge status-${cssClass(n.status)}">${esc(human(n.status))}</span><span class="badge">${esc(human(n.issue_type))}</span>${n.priority!=null?`<span class="badge priority">P${esc(n.priority)}</span>`:''}${n.labels.map(l=>`<span class="badge">${esc(l)}</span>`).join('')}</div>
+      <div class="readiness ${isReady?'ready':unresolved.length?'blocked':''}"><span class="readydot"></span><div><b>${isReady?'Ready now':n.status!=='open'?human(n.status):`Blocked by ${unresolved.length}`}</b><span>${isReady?'No unresolved blocking prerequisites.':unresolved.length?unresolved.map(e=>state.model.byId.get(e.source)?.label||e.source).slice(0,2).join(' · '):'Structural/coordination node.'}</span></div></div>
+      <div class="metrics"><div class="metric"><b>${blocksIn.length}</b><span>blockers</span></div><div class="metric"><b>${blocksOut.length}</b><span>impact</span></div><div class="metric"><b>${children.length}</b><span>children</span></div><div class="metric"><b>${critIdx>=0?`${critIdx+1}/${state.criticalPath.length}`:(state.waveMap.get(id)??'—')}</b><span>${critIdx>=0?'critical':'wave'}</span></div></div>
+      <div class="focusBtns"><button class="btn" data-focus="up">Trace prerequisites</button><button class="btn" data-focus="down">Trace impact</button><button class="btn wide" data-focus="all">Isolate full neighborhood</button></div>
+      <div class="tabs"><button class="tab active" data-tab="details">Details</button><button class="tab" data-tab="deps">Dependencies</button><button class="tab" data-tab="raw">Raw</button></div>
+      <div class="tabpane active" data-pane="details"><div class="subhead">Description</div><div class="md">${md(n.description||'No description.')}</div>${n.acceptance_criteria?`<div class="subhead">Acceptance criteria</div><div class="md">${md(n.acceptance_criteria)}</div>`:''}${n.notes?`<div class="subhead">Notes</div><div class="md">${md(n.notes)}</div>`:''}</div>
+      <div class="tabpane" data-pane="deps">${depSection('Blocking prerequisites',blocksIn,e=>e.source)}${depSection('Blocked dependents',blocksOut,e=>e.target)}${parent?depSection('Parent',[parent],e=>e.source):''}${depSection('Children',children,e=>e.target)}</div>
+      <div class="tabpane" data-pane="raw"><pre class="raw">${esc(JSON.stringify(n.raw,null,2))}</pre></div>`;
+  }
+  function depSection(title,edges,getId){if(!edges.length)return `<div class="subhead">${esc(title)}</div><div style="color:#637d8a;font-size:9px">None</div>`;return `<div class="subhead">${esc(title)}</div>${edges.map(e=>{const id=getId(e),n=state.model.byId.get(id);return `<div class="depitem" data-select-id="${esc(id)}"><div><b>${esc(n?.label||id)}</b><small>${esc(shortId(id))}</small></div><span class="edgekind">${esc(EDGE_LABELS[e.type]||e.type)}</span></div>`}).join('')}`}
+
+  function showNodeTooltip(ev,n){const exec=executionEdges(),blocks=exec.filter(e=>e.target===n.id).length,impact=exec.filter(e=>e.source===n.id).length;tooltip.html(`<b>${esc(n.label)}</b><div class="tid">${esc(n.id)}</div><div class="tmeta">${esc(human(n.status))} · ${esc(human(n.issue_type))}${n.priority!=null?` · P${esc(n.priority)}`:''} · ${blocks} blocker${blocks===1?'':'s'} · ${impact} downstream</div><div class="hint">Click to inspect · double-click to isolate</div>`).classed('show',true);moveTooltip(ev)}
+  function showEdgeTooltip(ev,e){const a=state.model.byId.get(e.source),b=state.model.byId.get(e.target);tooltip.html(`<b>${esc(EDGE_LABELS[e.type]||e.type)}</b><div class="tmeta">${esc(a?.label||e.source)}<br/>→ ${esc(b?.label||e.target)}</div>${e.type==='blocks'?'<div class="hint">Execution direction: blocker → blocked issue</div>':''}`).classed('show',true);moveTooltip(ev)}
+  function moveTooltip(ev){const node=els.tooltip,w=node.offsetWidth||300,h=node.offsetHeight||80,x=Math.min(innerWidth-w-12,ev.clientX+14),y=Math.min(innerHeight-h-12,ev.clientY+14);node.style.left=`${Math.max(8,x)}px`;node.style.top=`${Math.max(8,y)}px`}
+  function hideTooltip(){tooltip.classed('show',false)}
+
+  function updateSearch(){const q=state.search.trim().toLowerCase();if(!q){state.searchMatches=[];els.searchResults.classList.remove('show');renderHighlightsOnly();return}const scored=[];for(const n of state.model.nodes){const title=n.label.toLowerCase(),id=n.id.toLowerCase(),labels=n.labels.join(' ').toLowerCase(),desc=(n.description||'').toLowerCase();let s=0;if(title.includes(q))s+=100-id.indexOf(q);if(id.includes(q))s+=60;if(labels.includes(q))s+=35;if(desc.includes(q))s+=10;if(s)scored.push([n,s])}scored.sort((a,b)=>b[1]-a[1]);state.searchMatches=scored.map(x=>x[0].id);state.searchIndex=0;els.searchResults.innerHTML=scored.slice(0,9).map(([n],i)=>`<div class="searchrow ${i===0?'active':''}" data-search-id="${esc(n.id)}"><div><b>${esc(n.label)}</b><small>${esc(shortId(n.id))} · ${esc(n.labels.slice(0,3).join(', '))}</small></div><span class="searchcount">${esc(human(n.status))}</span></div>`).join('')+(scored.length>9?`<div style="padding:7px 9px;color:#667f8d;font-size:9px">+ ${scored.length-9} more matches</div>`:'');els.searchResults.classList.toggle('show',scored.length>0);renderHighlightsOnly()}
+
+  function setupZoom(){zoom=d3.zoom().scaleExtent([.06,3.6]).on('zoom',ev=>{state.currentTransform=ev.transform;zoomRoot.attr('transform',ev.transform);updateMinimapViewport()});svg.call(zoom).on('dblclick.zoom',null)}
+  function fitGraph(animated=true){if(!state.graphBounds)return;const r=els.graphWrap.getBoundingClientRect(),b=state.graphBounds,gW=b.maxX-b.minX,gH=b.maxY-b.minY,k=Math.max(.06,Math.min(1.25,.92*Math.min(r.width/gW,r.height/gH))),tx=r.width/2-(b.minX+b.maxX)/2*k,ty=r.height/2-(b.minY+b.maxY)/2*k,tr=d3.zoomIdentity.translate(tx,ty).scale(k);(animated?svg.transition().duration(420):svg).call(zoom.transform,tr)}
+  function zoomBy(f){svg.transition().duration(220).call(zoom.scaleBy,f)}
+
+  function updateMinimap(){const vis=state.visible;if(!vis||!state.graphBounds)return;const mini=d3.select(els.minimap),r=els.minimap.getBoundingClientRect(),b=state.graphBounds,pad=10,s=Math.min((r.width-2*pad)/(b.maxX-b.minX),(r.height-2*pad)/(b.maxY-b.minY));const mx=x=>pad+(x-b.minX)*s,my=y=>pad+(y-b.minY)*s;mini.selectAll('*').remove();
+    const positions=new Map();nodeLayer.selectAll('g.node').each(function(d){const tr=d3.select(this).attr('transform').match(/translate\(([^,]+),([^\)]+)\)/);if(tr)positions.set(d.id,{x:+tr[1]+NODE_W/2,y:+tr[2]+nodeHeight(d)/2})});
+    mini.append('g').selectAll('line').data(vis.edges).join('line').attr('class','medge').attr('x1',d=>mx(positions.get(d.source)?.x||0)).attr('y1',d=>my(positions.get(d.source)?.y||0)).attr('x2',d=>mx(positions.get(d.target)?.x||0)).attr('y2',d=>my(positions.get(d.target)?.y||0));
+    mini.append('g').selectAll('rect').data(vis.nodes).join('rect').attr('class','mnode').attr('x',d=>mx(positions.get(d.id)?.x||0)-1.8).attr('y',d=>my(positions.get(d.id)?.y||0)-1.3).attr('width',3.6).attr('height',2.6).attr('rx',1);mini.append('rect').attr('class','viewport');mini.node().__map={mx,my,s,b,pad};updateMinimapViewport();
+  }
+  function updateMinimapViewport(){const mini=d3.select(els.minimap),map=mini.node()?.__map,b=state.graphBounds;if(!map||!b)return;const r=els.graphWrap.getBoundingClientRect(),t=state.currentTransform,worldX0=(-t.x)/t.k,worldY0=(-t.y)/t.k,worldX1=(r.width-t.x)/t.k,worldY1=(r.height-t.y)/t.k;mini.select('.viewport').attr('x',map.mx(worldX0)).attr('y',map.my(worldY0)).attr('width',Math.max(2,(worldX1-worldX0)*map.s)).attr('height',Math.max(2,(worldY1-worldY0)*map.s))}
+  function minimapClick(ev){const map=els.minimap.__map;if(!map)return;const [px,py]=d3.pointer(ev,els.minimap),wx=map.b.minX+(px-map.pad)/map.s,wy=map.b.minY+(py-map.pad)/map.s,r=els.graphWrap.getBoundingClientRect(),k=state.currentTransform.k;svg.transition().duration(300).call(zoom.transform,d3.zoomIdentity.translate(r.width/2-wx*k,r.height/2-wy*k).scale(k))}
+
+  function showToast(text,type='',duration=2600){els.toast.textContent=text;els.toast.className=`toast show ${type}`;clearTimeout(showToast.t);showToast.t=setTimeout(()=>els.toast.className='toast',duration)}
+  function analysis(mode){state.analysis=state.analysis===mode?null:mode;renderHighlightsOnly();updateStats();if(mode==='critical'&&state.analysis)showToast(`Critical blocking chain: ${state.criticalPath.length} issues`);if(mode==='ready'&&state.analysis)showToast(`${state.readySet.size} issue${state.readySet.size===1?' is':'s are'} ready now`)}
+
+  function bindUI(){
+    document.querySelectorAll('.lens').forEach(b=>b.addEventListener('click',()=>setLens(b.dataset.lens)));
+    els.edgeChecks.addEventListener('change',e=>{if(e.target.dataset.edge){e.target.checked?state.edgeTypes.add(e.target.dataset.edge):state.edgeTypes.delete(e.target.dataset.edge);state.lens='all';document.querySelectorAll('.lens').forEach(x=>x.classList.toggle('active',x.dataset.lens==='all'));els.lensHint.textContent='custom';render(true)}});
+    els.statusChecks.addEventListener('change',e=>{if(e.target.dataset.status){e.target.checked?state.statuses.add(e.target.dataset.status):state.statuses.delete(e.target.dataset.status);render(true)}});
+    els.typeChecks.addEventListener('change',e=>{if(e.target.dataset.type){e.target.checked?state.types.add(e.target.dataset.type):state.types.delete(e.target.dataset.type);render(true)}});
+    els.priorityChips.addEventListener('click',e=>{const b=e.target.closest('[data-priority]');if(!b)return;const p=b.dataset.priority;if(state.priorities.has(p)){state.priorities.delete(p);b.classList.remove('active')}else{state.priorities.add(p);b.classList.add('active')}render(true)});
+    els.labelChips.addEventListener('click',e=>{const b=e.target.closest('[data-label]');if(!b)return;const l=b.dataset.label;if(state.labels.has(l)){state.labels.delete(l);b.classList.remove('active')}else{state.labels.add(l);b.classList.add('active')}els.labelSelectionHint.textContent=state.labels.size?`${state.labels.size} selected`:'any';render(true)});
+    document.querySelectorAll('#orientationSeg button').forEach(b=>b.addEventListener('click',()=>{state.orientation=b.dataset.value;document.querySelectorAll('#orientationSeg button').forEach(x=>x.classList.toggle('active',x===b));render(true)}));
+    document.querySelectorAll('#qualitySeg button').forEach(b=>b.addEventListener('click',()=>{state.quality=b.dataset.value;document.querySelectorAll('#qualitySeg button').forEach(x=>x.classList.toggle('active',x===b));render(true)}));
+    els.spacingRange.addEventListener('input',debounce(()=>{state.spacing=Number(els.spacingRange.value)/100;els.spacingVal.textContent=`${els.spacingRange.value}%`;render(true)},80));
+    els.hullsToggle.addEventListener('change',()=>{state.hulls=els.hullsToggle.checked;render(false)});els.wavesToggle.addEventListener('change',()=>{state.waves=els.wavesToggle.checked;render(false)});
+    document.querySelectorAll('[data-analysis]').forEach(b=>b.addEventListener('click',()=>analysis(b.dataset.analysis)));els.readyStat.addEventListener('click',()=>analysis('ready'));els.criticalStat.addEventListener('click',()=>analysis('critical'));
+    els.fitBtn.addEventListener('click',()=>fitGraph());els.fitBtnTop.addEventListener('click',()=>fitGraph());els.zoomIn.addEventListener('click',()=>zoomBy(1.35));els.zoomOut.addEventListener('click',()=>zoomBy(1/1.35));els.minimap.addEventListener('click',minimapClick);
+    els.clearFocus.addEventListener('click',clearFocus);
+    els.search.addEventListener('input',debounce(()=>{state.search=els.search.value;updateSearch()},90));els.search.addEventListener('keydown',e=>{if(e.key==='Enter'&&state.searchMatches.length){e.preventDefault();const id=state.searchMatches[state.searchIndex%state.searchMatches.length];state.searchIndex++;els.searchResults.classList.remove('show');selectNode(id,true)}});
+    els.searchResults.addEventListener('click',e=>{const r=e.target.closest('[data-search-id]');if(r){els.searchResults.classList.remove('show');selectNode(r.dataset.searchId,true)}});
+    document.addEventListener('click',e=>{if(!e.target.closest('.searchwrap'))els.searchResults.classList.remove('show')});
+    els.inspect.addEventListener('click',e=>{const close=e.target.closest('[data-close-inspector]');if(close){document.body.classList.remove('show-right');return}const sel=e.target.closest('[data-select-id]');if(sel)return selectNode(sel.dataset.selectId,true);const f=e.target.closest('[data-focus]');if(f){if(f.dataset.focus==='all')focusNeighborhood(state.selectedId);else focusDirection(state.selectedId,f.dataset.focus);return}const tab=e.target.closest('[data-tab]');if(tab){els.inspect.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));els.inspect.querySelectorAll('.tabpane').forEach(x=>x.classList.toggle('active',x.dataset.pane===tab.dataset.tab));return}const copy=e.target.closest('[data-copy-id]');if(copy){navigator.clipboard?.writeText(copy.dataset.copyId);showToast('Issue id copied')}});
+    els.importBtn.addEventListener('click',()=>{els.parseError.classList.remove('show');els.importDialog.showModal()});els.helpBtn.addEventListener('click',()=>els.helpDialog.showModal());document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.closeDialog).close()));
+    els.dropzone.addEventListener('click',()=>els.fileInput.click());els.fileInput.addEventListener('change',async()=>{const f=els.fileInput.files?.[0];if(f)els.dataInput.value=await f.text()});
+    for(const name of ['dragenter','dragover'])els.dropzone.addEventListener(name,e=>{e.preventDefault();els.dropzone.classList.add('drag')});for(const name of ['dragleave','drop'])els.dropzone.addEventListener(name,e=>{e.preventDefault();els.dropzone.classList.remove('drag')});els.dropzone.addEventListener('drop',async e=>{const f=e.dataTransfer.files?.[0];if(f)els.dataInput.value=await f.text()});
+    els.loadText.addEventListener('click',()=>{try{const model=parseInput(els.dataInput.value,'pasted / loaded data');els.importDialog.close();loadModel(model);showToast(`Loaded ${model.nodes.length} nodes and ${model.edges.length} edges`)}catch(e){els.parseError.textContent=e.message;els.parseError.classList.add('show')}});
+    els.resetBundled.addEventListener('click',()=>{els.importDialog.close();loadModel(parseInput(BUNDLED_JSONL,BUNDLED_NAME));showToast('Reset to bundled reviewed Beads graph')});
+    els.mobileFilters.addEventListener('click',()=>document.body.classList.toggle('show-left'));
+    window.addEventListener('resize',debounce(()=>{updateMinimap();if(innerWidth>850){document.body.classList.remove('show-left','show-right')}},120));
+    document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){if(e.key==='Escape'){document.activeElement.blur();els.searchResults.classList.remove('show')}return}if(e.key==='/'){e.preventDefault();els.search.focus()}else if(e.key.toLowerCase()==='f')fitGraph();else if(e.key.toLowerCase()==='c')analysis('critical');else if(e.key.toLowerCase()==='r')analysis('ready');else if(e.key==='Escape'){document.body.classList.remove('show-left','show-right');if(state.focusSet)clearFocus();else{state.analysis=null;state.selectedId=null;state.search='';els.search.value='';updateSearch();updateInspector();renderHighlightsOnly();updateStats()}}});
+    els.graphWrap.addEventListener('dragover',e=>e.preventDefault());els.graphWrap.addEventListener('drop',async e=>{e.preventDefault();const f=e.dataTransfer.files?.[0];if(!f)return;try{const model=parseInput(await f.text(),f.name);loadModel(model);showToast(`Loaded ${model.nodes.length} nodes from ${f.name}`)}catch(err){showToast(err.message,'error',5000)}});
+  }
+
+  setupZoom();bindUI();
+  try{loadModel(parseInput(BUNDLED_JSONL,BUNDLED_NAME));}
+  catch(e){els.empty.classList.add('show');els.emptyTitle.textContent='Bundled graph failed to load';els.emptyText.textContent=e.message;showToast(e.message,'error',6000)}
+</script>
+</body>
+</html>
