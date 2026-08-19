@@ -1,67 +1,84 @@
-# START HERE — Beads Atlas Demonstration
+# START HERE — Beads Atlas repository demo
 
-This ZIP is the complete demonstration package.
+This repository is the complete clean-room demonstration package.
+
+There is **no bootstrap archive and no second transport layer**. Do not use the old Gist or GitHub Release asset. Work only from the ordinary files on this repository's default branch.
 
 ## Hard boundary
 
-Everything required is already inside this directory.
+Use repository/GitHub reading tools to obtain the files below. If your execution environment needs filesystem copies, create those copies from the repository file contents you already fetched. Do not switch to shell `curl`, `wget`, guessed IPs, release downloads, Gist lookups, web-search reconstruction, prior conversations, or project caches.
 
-After the ZIP itself has been downloaded, **do not use the network**:
-do not browse, search, fetch URLs, invoke GitHub/Gist connectors, run curl/wget,
-or recover files from prior conversations/projects.
+If you cannot obtain an exact repository file through the available repository tools, stop and report that specific transport limitation instead of improvising another retrieval path.
 
-If a local step fails, stop and report that local failure. Do not attempt a
-network workaround.
+## Required repository files
 
-## 1. Verify the package
+- `issues.jsonl` — the intended 41-issue Beads demonstration corpus.
+- `SHA256SUMS` — integrity manifest for the materialized package.
+- `verify.py` — local package verifier when the repository files are available on disk.
+- `beads-atlas/SKILL.md` — the operative skill contract.
+- `beads-atlas/scripts/atlas.py` — deterministic inspector / builder / validator.
+- the remaining files under `beads-atlas/` — template, references, fixtures, and regression support used by the skill.
 
-Run:
+Do not substitute the small sample files under `beads-atlas/assets/` for the repository-root `issues.jsonl`.
+
+## 1. Read the skill first
+
+Read `beads-atlas/SKILL.md` completely before running the demo. Follow its requirements and stop gates. In particular, use its own CLI rather than recreating graph parsing, escaping, dependency semantics, layout logic, or validation ad hoc.
+
+## 2. Verify locally when files are materialized
+
+From the repository root:
 
 ```bash
 python3 verify.py
 ```
 
-Expected result:
+Expected package result includes:
 
 ```text
 BEADS_ATLAS_DEMO_VERIFY=PASS
 records=41
 ```
 
-## 2. Read the skill
+A failed integrity check is a hard stop.
 
-Read `beads-atlas/SKILL.md` completely and treat it, together with its bundled
-support files, as the operative task specification.
+## 3. Inspect the real demo corpus
 
-## 3. Demonstrate it
-
-Use the **top-level `issues.jsonl` in this package** as the demonstration input.
-
-Do not substitute bundled samples, another project, prior conversation state,
-or reconstructed graph logic.
-
-Use the skill's own deterministic builder / graph logic / validator.
-
-If the skill permits choosing the output location, prefer:
-
-```text
-/mnt/data/beads-atlas-demo.html
+```bash
+uv run beads-atlas/scripts/atlas.py inspect issues.jsonl
 ```
 
-Run the skill's validator on the produced HTML, then surface the finished HTML
-as a downloadable artifact and report validation concisely.
+Record the source format, node/edge/relation counts, SHA-256, cycle status, ready set, and blocking longest path reported by the skill.
 
-## Source integrity
+## 4. Build with the bundled deterministic implementation
 
-Source skill archive SHA-256:
+Prefer the normal ChatGPT artifact location:
 
-```text
-a6f52ba7e6df39166d6686f4d7553f0c21165dc4be82f51dba79e0ed68d40c69
+```bash
+uv run beads-atlas/scripts/atlas.py build issues.jsonl \
+  --name "Beads Atlas demo" \
+  -o /mnt/data/beads-atlas-demo.html
 ```
 
-Demonstration corpus:
+Do not hand-edit the generated HTML.
 
-```text
-records=41
-sha256=832655f821891bcfb460bd0914b70427a17d5cd9f2169bc689e748713a3c10fb
+## 5. Validate explicitly
+
+```bash
+uv run beads-atlas/scripts/atlas.py validate \
+  /mnt/data/beads-atlas-demo.html \
+  --source issues.jsonl
 ```
+
+Static validation must pass before delivery. If the environment cannot load the generated viewer's jsDelivr modules in a browser, report exactly what the skill specifies: static validation passed; browser-runtime smoke unavailable. Do not weaken or replace the renderer merely to manufacture a browser-green result.
+
+## 6. Deliver
+
+Surface `/mnt/data/beads-atlas-demo.html` as the finished artifact. Report concisely:
+
+- source format/counts/hash;
+- artifact hash;
+- static validation status;
+- browser-runtime status.
+
+The purpose of this repository is to test one simple bootstrap boundary: **one normal public GitHub repository URL, then ordinary repository files only**.
